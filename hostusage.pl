@@ -29,6 +29,8 @@ my @hosts = (
 
 my $interval = 5;
 
+my $authfile = "./auth";
+
 # Signalflags
 my $written = 0;
 my $run = 1;
@@ -43,6 +45,14 @@ my %readhandles;
 
 $SIG{USR1} = "onewrote";
 $SIG{USR2} = "killchild";
+
+open(my $afh, '<', $authfile);
+my $user = <$afh>;
+my $passwd = <$afh>;
+close($afh);
+
+chomp($user);
+chomp($passwd);
 
 foreach my $host(@hosts) {
   # Spawn an SSH connection
@@ -138,7 +148,7 @@ sub sshfork {
   }
   elsif($pid == 0) { #child
     my $ssh = Net::SSH::Perl->new($host, protocol => '2,1') or die "Could not connect to $host: $!";
-    $ssh->login("USERNAME", "PASSWORD") or die "Could not log in to $host: $!";
+    $ssh->login($user, $passwd) or die "Could not log in to $host: $!";
 
     my $time = [gettimeofday];
     while($run) {
