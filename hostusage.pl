@@ -138,7 +138,7 @@ sub sshfork {
   }
   elsif($pid == 0) { #child
     my $ssh = Net::SSH::Perl->new($host, protocol => '2,1') or die "Could not connect to $host: $!";
-    $ssh->login("nmjxv3", "REDACTED") or die "Could not log in to $host: $!";
+    $ssh->login("USERNAME", "PASSWORD") or die "Could not log in to $host: $!";
 
     my $time = [gettimeofday];
     while($run) {
