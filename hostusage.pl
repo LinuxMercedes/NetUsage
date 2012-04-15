@@ -1,13 +1,12 @@
 #! /usr/bin/perl
 
-use Data::Dumper;
 use strict;
 use warnings;
 
 use Net::SSH::Perl;
 use Time::HiRes qw(gettimeofday tv_interval);
 
-BEGIN { $| = 1 }
+BEGIN { $| = 1 } # disable buffering on pipes
 
 my @hosts = (
   "rc01xcs213.managed.mst.edu",
@@ -28,6 +27,9 @@ my @hosts = (
   "rc16xcs213.managed.mst.edu",
 );
 
+my $interval = 5;
+
+# Signalflags
 my $written = 0;
 my $run = 1;
 my $go = 1;
@@ -66,6 +68,8 @@ while($go) {
   my $rxsum = 0 ;
 
   foreach my $key(sort keys %readhandles) {
+    last if(! $go);
+
     my $handle = $readhandles{$key};
     my $tx = <$handle>;
     my $rx = <$handle>;
@@ -108,6 +112,8 @@ close($logfh);
 close($hostfh);
 exit(0);
 
+## SIGNAL HANDLERS ##
+
 sub onewrote {
   $written++;
 }
@@ -119,6 +125,8 @@ sub killme {
 sub killchild {
   undef $run;
 }
+
+## SUBPROCESSES ##
 
 sub sshfork {
   my $host = shift;
@@ -132,7 +140,6 @@ sub sshfork {
     my $ssh = Net::SSH::Perl->new($host, protocol => '2,1') or die "Could not connect to $host: $!";
     $ssh->login("nmjxv3", "REDACTED") or die "Could not log in to $host: $!";
 
-#    $ssh->cmd("while true; do cat /sys/class/net/eth1/statistics/tx_bytes | nc localhost 3000; sleep 5; done");
     my $time = [gettimeofday];
     while($run) {
       my($stdout, $stderr, $exit) = $ssh->cmd("cat /sys/class/net/eth0/statistics/tx_bytes");
@@ -144,7 +151,7 @@ sub sshfork {
       print tv_interval($time, $newtime) . "\n";
       $time = $newtime;
       kill "USR1", $parent or die "cannot kill $parent: $!";
-      sleep 1;
+      sleep $interval;
     }
   } 
   else { #parent    
